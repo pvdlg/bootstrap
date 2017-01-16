@@ -69,7 +69,7 @@ const Collapse = (($) => {
   class Collapse {
 
     constructor(element, config) {
-      this._isTransitioning = false
+      this._isExpanding     = false
       this._element         = element
       this._config          = this._getConfig(config)
       this._triggerArray    = $.makeArray($(
@@ -103,7 +103,7 @@ const Collapse = (($) => {
     // public
 
     toggle() {
-      if ($(this._element).hasClass(ClassName.SHOW)) {
+      if ($(this._element).hasClass(ClassName.SHOW) || this._isExpanding) {
         this.hide()
       } else {
         this.show()
@@ -111,13 +111,6 @@ const Collapse = (($) => {
     }
 
     show() {
-      if (this._isTransitioning) {
-        throw new Error('Collapse is transitioning')
-      }
-
-      if ($(this._element).hasClass(ClassName.SHOW)) {
-        return
-      }
 
       let actives
       let activesData
@@ -131,9 +124,6 @@ const Collapse = (($) => {
 
       if (actives) {
         activesData = $(actives).data(DATA_KEY)
-        if (activesData && activesData._isTransitioning) {
-          return
-        }
       }
 
       const startEvent = $.Event(Event.SHOW)
@@ -168,12 +158,12 @@ const Collapse = (($) => {
       const scrollSize           = `scroll${capitalizedDimension}`
 
       const start = () => {
-        this.setTransitioning(true)
+        this._isExpanding = true
         this._element.style[dimension] = `${this._element[scrollSize]}px`
       }
 
       const complete = () => {
-        this.setTransitioning(false)
+        this._isExpanding = false
         $(this._element)
           .removeClass(ClassName.COLLAPSING)
           .addClass(ClassName.COLLAPSE)
@@ -186,13 +176,6 @@ const Collapse = (($) => {
     }
 
     hide() {
-      if (this._isTransitioning) {
-        throw new Error('Collapse is transitioning')
-      }
-
-      if (!$(this._element).hasClass(ClassName.SHOW)) {
-        return
-      }
 
       const startEvent = $.Event(Event.HIDE)
       $(this._element).trigger(startEvent)
@@ -215,19 +198,18 @@ const Collapse = (($) => {
 
       this._element.setAttribute('aria-expanded', false)
 
-      if (this._triggerArray.length) {
-        $(this._triggerArray)
-          .addClass(ClassName.COLLAPSED)
-          .attr('aria-expanded', false)
-      }
-
       const start = () => {
-        this.setTransitioning(true)
+        this._isExpanding = false
         this._element.style[dimension] = ''
       }
 
       const complete = () => {
-        this.setTransitioning(false)
+        this._isExpanding = false
+        if (this._triggerArray.length) {
+          $(this._triggerArray)
+            .addClass(ClassName.COLLAPSED)
+            .attr('aria-expanded', false)
+        }
         $(this._element)
           .removeClass(ClassName.COLLAPSING)
           .addClass(ClassName.COLLAPSE)
@@ -237,10 +219,6 @@ const Collapse = (($) => {
       $(this._element).transition(start, complete)
     }
 
-    setTransitioning(isTransitioning) {
-      this._isTransitioning = isTransitioning
-    }
-
     dispose() {
       $.removeData(this._element, DATA_KEY)
 
@@ -248,7 +226,7 @@ const Collapse = (($) => {
       this._parent          = null
       this._element         = null
       this._triggerArray    = null
-      this._isTransitioning = null
+      this._isExpanding = null
     }
 
 

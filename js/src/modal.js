@@ -85,7 +85,6 @@ const Modal = (($) => {
       this._isShown             = false
       this._isBodyOverflowing   = false
       this._ignoreBackdropClick = false
-      this._isTransitioning     = false
       this._originalBodyPadding = 0
       this._scrollbarWidth      = 0
     }
@@ -109,10 +108,6 @@ const Modal = (($) => {
     }
 
     show(relatedTarget) {
-      if (this._isTransitioning) {
-        throw new Error('Modal is transitioning')
-      }
-
       const showEvent = $.Event(Event.SHOW, {
         relatedTarget
       })
@@ -123,7 +118,6 @@ const Modal = (($) => {
         return
       }
 
-      this._isTransitioning = true
       this._isShown = true
 
       this._checkScrollbar()
@@ -156,10 +150,6 @@ const Modal = (($) => {
         event.preventDefault()
       }
 
-      if (this._isTransitioning) {
-        throw new Error('Modal is transitioning')
-      }
-
       const hideEvent = $.Event(Event.HIDE)
       $(this._element).trigger(hideEvent)
 
@@ -167,7 +157,6 @@ const Modal = (($) => {
         return
       }
 
-      this._isTransitioning = true
       this._isShown = false
 
       this._setEscapeEvent()
@@ -175,7 +164,7 @@ const Modal = (($) => {
 
       $(document).off(Event.FOCUSIN)
 
-      $(this._element).transition(() => {
+      $(this._dialog).transition(() => {
         $(this._element).removeClass(ClassName.SHOW)
 
         $(this._element).off(Event.CLICK_DISMISS)
@@ -233,7 +222,6 @@ const Modal = (($) => {
         if (this._config.focus) {
           this._element.focus()
         }
-        this._isTransitioning = false
         $(this._element).trigger($.Event(Event.SHOWN, {
           relatedTarget
         }))
@@ -277,8 +265,7 @@ const Modal = (($) => {
 
     _hideModal() {
       this._element.style.display = 'none'
-      this._element.setAttribute('aria-hidden', 'true')
-      this._isTransitioning = false
+      this._element.setAttribute('aria-hidden', true)
       this._showBackdrop(() => {
         $(document.body).removeClass(ClassName.OPEN)
         this._resetAdjustments()

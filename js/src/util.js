@@ -91,19 +91,14 @@ const Util = (($) => {
     const duration = getCssTransitionDuration(this)
     // if there is a non 0 transition duration and transition are supported
     if (duration) {
-      let called = false
-      this.one(TRANSITION_END, () => {
-        if (!called) {
-          called = true
-          executeCallback(complete)
-        }
-      })
       // set a timeout to call complete in case (instead of using transitionend that can sometimes not be triggered). This way we can guarantee complete is always called
-      setTimeout(() => {
-        if (!called) {
-          called = true
-          executeCallback(complete)
-        }
+      const element = this.get(0)
+      if (element.transitionTimeout) {
+        clearTimeout(element.transitionTimeout)
+      }
+      element.transitionTimeout = setTimeout(() => {
+        delete element.transitionTimeout
+        executeCallback(complete)
       }, duration * MILLIS)
       // execute the start transition function, after setting the timeout
       executeCallback(start)
