@@ -1,7 +1,7 @@
-/* global Tether */
-
+import Tether from 'Tether'
 import Util from './util'
-
+import document from 'document'
+import jQuery from 'jquery'
 
 /**
  * --------------------------------------------------------------------------

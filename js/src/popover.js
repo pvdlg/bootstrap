@@ -1,5 +1,5 @@
 import Tooltip from './tooltip'
-
+import jQuery from 'jquery'
 
 /**
  * --------------------------------------------------------------------------
