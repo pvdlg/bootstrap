@@ -86,7 +86,6 @@ const Modal = (($) => {
       this._isShown             = false
       this._isBodyOverflowing   = false
       this._ignoreBackdropClick = false
-      this._isTransitioning     = false
       this._originalBodyPadding = 0
       this._scrollbarWidth      = 0
     }
@@ -111,7 +110,7 @@ const Modal = (($) => {
 
     show(relatedTarget) {
       if (this._isTransitioning) {
-        throw new Error('Modal is transitioning')
+        return
       }
 
       const showEvent = $.Event(Event.SHOW, {
@@ -158,10 +157,20 @@ const Modal = (($) => {
       }
 
       if (this._isTransitioning) {
-        throw new Error('Modal is transitioning')
+        return
       }
 
+// <<<<<<< HEAD
+// =======
+//       const transition = Util.supportsTransitionEnd() && $(this._element).hasClass(ClassName.FADE)
+//
+//       if (transition) {
+//         this._isTransitioning = true
+//       }
+//
+// >>>>>>> js-transitioning-1
       const hideEvent = $.Event(Event.HIDE)
+
       $(this._element).trigger(hideEvent)
 
       if (!this._isShown || hideEvent.isDefaultPrevented()) {
@@ -179,9 +188,23 @@ const Modal = (($) => {
       $(this._element).transition(() => {
         $(this._element).removeClass(ClassName.SHOW)
 
+// <<<<<<< HEAD
         $(this._element).off(Event.CLICK_DISMISS)
         $(this._dialog).off(Event.MOUSEDOWN_DISMISS)
       }, (event) => this._hideModal(event))
+// //=======
+//       $(this._element).off(Event.CLICK_DISMISS)
+//       $(this._dialog).off(Event.MOUSEDOWN_DISMISS)
+//
+//       if (transition) {
+//
+//         $(this._element)
+//           .one(Util.TRANSITION_END, (event) => this._hideModal(event))
+//           .emulateTransitionEnd(TRANSITION_DURATION)
+//       } else {
+//         this._hideModal()
+//       }
+// >>>>>>> js-transitioning-1
     }
 
     dispose() {
@@ -278,7 +301,7 @@ const Modal = (($) => {
 
     _hideModal() {
       this._element.style.display = 'none'
-      this._element.setAttribute('aria-hidden', 'true')
+      this._element.setAttribute('aria-hidden', true)
       this._isTransitioning = false
       this._showBackdrop(() => {
         $(document.body).removeClass(ClassName.OPEN)
