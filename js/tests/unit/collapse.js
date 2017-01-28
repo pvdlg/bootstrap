@@ -121,7 +121,7 @@ $(function () {
   QUnit.test('should hide a collapsed element (long transition)', function (assert) {
     assert.expect(1)
     var done = assert.async()
-    var $el = $('<div class="collapse"/>').css('transition-duration', '1s')
+    var $el = $('<div class="collapse"/>').css('transition-duration', '.3s')
     $el.one('shown.bs.collapse', function () {
       $el.bootstrapCollapse('hide')
     })
