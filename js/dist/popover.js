@@ -40,11 +40,6 @@ var Popover = function ($) {
     content: '(string|element|function)'
   });
 
-  var ClassName = {
-    FADE: 'fade',
-    SHOW: 'show'
-  };
-
   var Selector = {
     TITLE: '.popover-title',
     CONTENT: '.popover-content'
@@ -94,8 +89,6 @@ var Popover = function ($) {
       // we use append for html objects to maintain js events
       this.setElementContent($tip.find(Selector.TITLE), this.getTitle());
       this.setElementContent($tip.find(Selector.CONTENT), this._getContent());
-
-      $tip.removeClass(ClassName.FADE + ' ' + ClassName.SHOW);
 
       this.cleanupTether();
     };

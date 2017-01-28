@@ -25,8 +25,6 @@ var Modal = function ($) {
   var EVENT_KEY = '.' + DATA_KEY;
   var DATA_API_KEY = '.data-api';
   var JQUERY_NO_CONFLICT = $.fn[NAME];
-  var TRANSITION_DURATION = 300;
-  var BACKDROP_TRANSITION_DURATION = 150;
   var ESCAPE_KEYCODE = 27; // KeyboardEvent.which value for Escape (Esc) key
 
   var Default = {
@@ -89,7 +87,6 @@ var Modal = function ($) {
       this._isShown = false;
       this._isBodyOverflowing = false;
       this._ignoreBackdropClick = false;
-      this._isTransitioning = false;
       this._originalBodyPadding = 0;
       this._scrollbarWidth = 0;
     }
@@ -106,12 +103,9 @@ var Modal = function ($) {
       var _this = this;
 
       if (this._isTransitioning) {
-        throw new Error('Modal is transitioning');
+        return;
       }
 
-      if (Util.supportsTransitionEnd() && $(this._element).hasClass(ClassName.FADE)) {
-        this._isTransitioning = true;
-      }
       var showEvent = $.Event(Event.SHOW, {
         relatedTarget: relatedTarget
       });
@@ -122,6 +116,7 @@ var Modal = function ($) {
         return;
       }
 
+      this._isTransitioning = true;
       this._isShown = true;
 
       this._checkScrollbar();
@@ -157,21 +152,27 @@ var Modal = function ($) {
       }
 
       if (this._isTransitioning) {
-        throw new Error('Modal is transitioning');
+        return;
       }
 
-      var transition = Util.supportsTransitionEnd() && $(this._element).hasClass(ClassName.FADE);
-      if (transition) {
-        this._isTransitioning = true;
-      }
-
+      // <<<<<<< HEAD
+      // =======
+      //       const transition = Util.supportsTransitionEnd() && $(this._element).hasClass(ClassName.FADE)
+      //
+      //       if (transition) {
+      //         this._isTransitioning = true
+      //       }
+      //
+      // >>>>>>> js-transitioning-1
       var hideEvent = $.Event(Event.HIDE);
+
       $(this._element).trigger(hideEvent);
 
       if (!this._isShown || hideEvent.isDefaultPrevented()) {
         return;
       }
 
+      this._isTransitioning = true;
       this._isShown = false;
 
       this._setEscapeEvent();
@@ -179,18 +180,28 @@ var Modal = function ($) {
 
       $(document).off(Event.FOCUSIN);
 
-      $(this._element).removeClass(ClassName.SHOW);
+      $(this._element).transition(function () {
+        $(_this2._element).removeClass(ClassName.SHOW);
 
-      $(this._element).off(Event.CLICK_DISMISS);
-      $(this._dialog).off(Event.MOUSEDOWN_DISMISS);
-
-      if (transition) {
-        $(this._element).one(Util.TRANSITION_END, function (event) {
-          return _this2._hideModal(event);
-        }).emulateTransitionEnd(TRANSITION_DURATION);
-      } else {
-        this._hideModal();
-      }
+        // <<<<<<< HEAD
+        $(_this2._element).off(Event.CLICK_DISMISS);
+        $(_this2._dialog).off(Event.MOUSEDOWN_DISMISS);
+      }, function (event) {
+        return _this2._hideModal(event);
+      });
+      // //=======
+      //       $(this._element).off(Event.CLICK_DISMISS)
+      //       $(this._dialog).off(Event.MOUSEDOWN_DISMISS)
+      //
+      //       if (transition) {
+      //
+      //         $(this._element)
+      //           .one(Util.TRANSITION_END, (event) => this._hideModal(event))
+      //           .emulateTransitionEnd(TRANSITION_DURATION)
+      //       } else {
+      //         this._hideModal()
+      //       }
+      // >>>>>>> js-transitioning-1
     };
 
     Modal.prototype.dispose = function dispose() {
@@ -220,8 +231,6 @@ var Modal = function ($) {
     Modal.prototype._showElement = function _showElement(relatedTarget) {
       var _this3 = this;
 
-      var transition = Util.supportsTransitionEnd() && $(this._element).hasClass(ClassName.FADE);
-
       if (!this._element.parentNode || this._element.parentNode.nodeType !== Node.ELEMENT_NODE) {
         // don't move modals dom position
         document.body.appendChild(this._element);
@@ -231,33 +240,27 @@ var Modal = function ($) {
       this._element.removeAttribute('aria-hidden');
       this._element.scrollTop = 0;
 
-      if (transition) {
-        Util.reflow(this._element);
-      }
+      Util.reflow(this._element);
 
-      $(this._element).addClass(ClassName.SHOW);
+      var start = function start() {
+        $(_this3._element).addClass(ClassName.SHOW);
 
-      if (this._config.focus) {
-        this._enforceFocus();
-      }
+        if (_this3._config.focus) {
+          _this3._enforceFocus();
+        }
+      };
 
-      var shownEvent = $.Event(Event.SHOWN, {
-        relatedTarget: relatedTarget
-      });
-
-      var transitionComplete = function transitionComplete() {
+      var complete = function complete() {
         if (_this3._config.focus) {
           _this3._element.focus();
         }
         _this3._isTransitioning = false;
-        $(_this3._element).trigger(shownEvent);
+        $(_this3._element).trigger($.Event(Event.SHOWN, {
+          relatedTarget: relatedTarget
+        }));
       };
 
-      if (transition) {
-        $(this._dialog).one(Util.TRANSITION_END, transitionComplete).emulateTransitionEnd(TRANSITION_DURATION);
-      } else {
-        transitionComplete();
-      }
+      $(this._dialog).transition(start, complete);
     };
 
     Modal.prototype._enforceFocus = function _enforceFocus() {
@@ -301,7 +304,7 @@ var Modal = function ($) {
       var _this7 = this;
 
       this._element.style.display = 'none';
-      this._element.setAttribute('aria-hidden', 'true');
+      this._element.setAttribute('aria-hidden', true);
       this._isTransitioning = false;
       this._showBackdrop(function () {
         $(document.body).removeClass(ClassName.OPEN);
@@ -324,8 +327,6 @@ var Modal = function ($) {
       var animate = $(this._element).hasClass(ClassName.FADE) ? ClassName.FADE : '';
 
       if (this._isShown && this._config.backdrop) {
-        var doAnimate = Util.supportsTransitionEnd() && animate;
-
         this._backdrop = document.createElement('div');
         this._backdrop.className = ClassName.BACKDROP;
 
@@ -350,25 +351,14 @@ var Modal = function ($) {
           }
         });
 
-        if (doAnimate) {
+        if (animate) {
           Util.reflow(this._backdrop);
         }
 
-        $(this._backdrop).addClass(ClassName.SHOW);
-
-        if (!callback) {
-          return;
-        }
-
-        if (!doAnimate) {
-          callback();
-          return;
-        }
-
-        $(this._backdrop).one(Util.TRANSITION_END, callback).emulateTransitionEnd(BACKDROP_TRANSITION_DURATION);
+        $(this._backdrop).transition(function () {
+          return $(_this8._backdrop).addClass(ClassName.SHOW);
+        }, callback);
       } else if (!this._isShown && this._backdrop) {
-        $(this._backdrop).removeClass(ClassName.SHOW);
-
         var callbackRemove = function callbackRemove() {
           _this8._removeBackdrop();
           if (callback) {
@@ -376,11 +366,9 @@ var Modal = function ($) {
           }
         };
 
-        if (Util.supportsTransitionEnd() && $(this._element).hasClass(ClassName.FADE)) {
-          $(this._backdrop).one(Util.TRANSITION_END, callbackRemove).emulateTransitionEnd(BACKDROP_TRANSITION_DURATION);
-        } else {
-          callbackRemove();
-        }
+        $(this._backdrop).transition(function () {
+          return $(_this8._backdrop).removeClass(ClassName.SHOW);
+        }, callbackRemove);
       } else if (callback) {
         callback();
       }
@@ -418,17 +406,24 @@ var Modal = function ($) {
     };
 
     Modal.prototype._setScrollbar = function _setScrollbar() {
-      var bodyPadding = parseInt($(Selector.FIXED_CONTENT).css('padding-right') || 0, 10);
+      var _this9 = this;
 
       this._originalBodyPadding = document.body.style.paddingRight || '';
-
       if (this._isBodyOverflowing) {
-        document.body.style.paddingRight = bodyPadding + this._scrollbarWidth + 'px';
+        document.body.style.paddingRight = parseInt(document.body.style.paddingRight || 0, 10) + this._scrollbarWidth + 'px';
+        $(Selector.FIXED_CONTENT).each(function (index, element) {
+          $(element).data('padding-right', element.style.paddingRight || '');
+          element.style.paddingRight = parseInt($(element).css('padding-right') || 0, 10) + _this9._scrollbarWidth + 'px';
+        });
       }
     };
 
     Modal.prototype._resetScrollbar = function _resetScrollbar() {
       document.body.style.paddingRight = this._originalBodyPadding;
+      $(Selector.FIXED_CONTENT).each(function (index, element) {
+        element.style.paddingRight = $(element).data('padding-right');
+        $(element).removeData('padding-right');
+      });
     };
 
     Modal.prototype._getScrollbarWidth = function _getScrollbarWidth() {
@@ -486,35 +481,30 @@ var Modal = function ($) {
    */
 
   $(document).on(Event.CLICK_DATA_API, Selector.DATA_TOGGLE, function (event) {
-    var _this9 = this;
+    var _this10 = this;
 
-    var target = void 0;
-    var selector = Util.getSelectorFromElement(this);
+    var $target = Util.getTargets(this).first();
 
-    if (selector) {
-      target = $(selector)[0];
-    }
-
-    var config = $(target).data(DATA_KEY) ? 'toggle' : $.extend({}, $(target).data(), $(this).data());
+    var config = $target.data(DATA_KEY) ? 'toggle' : $.extend({}, $target.data(), $(this).data());
 
     if (this.tagName === 'A' || this.tagName === 'AREA') {
       event.preventDefault();
     }
 
-    var $target = $(target).one(Event.SHOW, function (showEvent) {
+    $target.one(Event.SHOW, function (showEvent) {
       if (showEvent.isDefaultPrevented()) {
         // only register focus restorer if modal will actually get shown
         return;
       }
 
       $target.one(Event.HIDDEN, function () {
-        if ($(_this9).is(':visible')) {
-          _this9.focus();
+        if ($(_this10).is(':visible')) {
+          _this10.focus();
         }
       });
     });
 
-    Modal._jQueryInterface.call($(target), config, this);
+    Modal._jQueryInterface.call($target, config, this);
   });
 
   /**

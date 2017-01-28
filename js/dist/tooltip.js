@@ -32,7 +32,6 @@ var Tooltip = function ($) {
   var DATA_KEY = 'bs.tooltip';
   var EVENT_KEY = '.' + DATA_KEY;
   var JQUERY_NO_CONFLICT = $.fn[NAME];
-  var TRANSITION_DURATION = 150;
   var CLASS_PREFIX = 'bs-tether';
 
   var Default = {
@@ -125,7 +124,6 @@ var Tooltip = function ($) {
       this._timeout = 0;
       this._hoverState = '';
       this._activeTrigger = {};
-      this._isTransitioning = false;
       this._tether = null;
 
       // protected
@@ -214,74 +212,74 @@ var Tooltip = function ($) {
 
       var showEvent = $.Event(this.constructor.Event.SHOW);
       if (this.isWithContent() && this._isEnabled) {
-        if (this._isTransitioning) {
-          throw new Error('Tooltip is transitioning');
-        }
-        $(this.element).trigger(showEvent);
+        var _ret = function () {
+          $(_this.element).trigger(showEvent);
 
-        var isInTheDom = $.contains(this.element.ownerDocument.documentElement, this.element);
+          var isInTheDom = $.contains(_this.element.ownerDocument.documentElement, _this.element);
 
-        if (showEvent.isDefaultPrevented() || !isInTheDom) {
-          return;
-        }
-
-        var tip = this.getTipElement();
-        var tipId = Util.getUID(this.constructor.NAME);
-
-        tip.setAttribute('id', tipId);
-        this.element.setAttribute('aria-describedby', tipId);
-
-        this.setContent();
-
-        if (this.config.animation) {
-          $(tip).addClass(ClassName.FADE);
-        }
-
-        var placement = typeof this.config.placement === 'function' ? this.config.placement.call(this, tip, this.element) : this.config.placement;
-
-        var attachment = this._getAttachment(placement);
-
-        var container = this.config.container === false ? document.body : $(this.config.container);
-
-        $(tip).data(this.constructor.DATA_KEY, this).appendTo(container);
-
-        $(this.element).trigger(this.constructor.Event.INSERTED);
-
-        this._tether = new Tether({
-          attachment: attachment,
-          element: tip,
-          target: this.element,
-          classes: TetherClass,
-          classPrefix: CLASS_PREFIX,
-          offset: this.config.offset,
-          constraints: this.config.constraints,
-          addTargetClasses: false
-        });
-
-        Util.reflow(tip);
-        this._tether.position();
-
-        $(tip).addClass(ClassName.SHOW);
-
-        var complete = function complete() {
-          var prevHoverState = _this._hoverState;
-          _this._hoverState = null;
-          _this._isTransitioning = false;
-
-          $(_this.element).trigger(_this.constructor.Event.SHOWN);
-
-          if (prevHoverState === HoverState.OUT) {
-            _this._leave(null, _this);
+          if (showEvent.isDefaultPrevented() || !isInTheDom) {
+            return {
+              v: void 0
+            };
           }
-        };
 
-        if (Util.supportsTransitionEnd() && $(this.tip).hasClass(ClassName.FADE)) {
-          this._isTransitioning = true;
-          $(this.tip).one(Util.TRANSITION_END, complete).emulateTransitionEnd(Tooltip._TRANSITION_DURATION);
-          return;
-        }
+          var tip = _this.getTipElement();
+          var tipId = Util.getUID(_this.constructor.NAME);
 
-        complete();
+          tip.setAttribute('id', tipId);
+          _this.element.setAttribute('aria-describedby', tipId);
+
+          _this.setContent();
+
+          if (_this.config.animation) {
+            $(tip).addClass(ClassName.FADE);
+          }
+
+          var placement = typeof _this.config.placement === 'function' ? _this.config.placement.call(_this, tip, _this.element) : _this.config.placement;
+
+          var attachment = _this._getAttachment(placement);
+
+          var container = _this.config.container === false ? document.body : $(_this.config.container);
+
+          $(tip).data(_this.constructor.DATA_KEY, _this);
+
+          if (!$.contains(_this.element.ownerDocument.documentElement, _this.tip)) {
+            $(tip).appendTo(container);
+          }
+
+          $(_this.element).trigger(_this.constructor.Event.INSERTED);
+
+          _this._tether = new Tether({
+            attachment: attachment,
+            element: tip,
+            target: _this.element,
+            classes: TetherClass,
+            classPrefix: CLASS_PREFIX,
+            offset: _this.config.offset,
+            constraints: _this.config.constraints,
+            addTargetClasses: false
+          });
+
+          Util.reflow(tip);
+          _this._tether.position();
+
+          var complete = function complete() {
+            var prevHoverState = _this._hoverState;
+            _this._hoverState = null;
+
+            $(_this.element).trigger(_this.constructor.Event.SHOWN);
+
+            if (prevHoverState === HoverState.OUT) {
+              _this._leave(null, _this);
+            }
+          };
+
+          $(_this.tip).transition(function () {
+            return $(tip).addClass(ClassName.SHOW);
+          }, complete);
+        }();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
       }
     };
 
@@ -290,23 +288,6 @@ var Tooltip = function ($) {
 
       var tip = this.getTipElement();
       var hideEvent = $.Event(this.constructor.Event.HIDE);
-      if (this._isTransitioning) {
-        throw new Error('Tooltip is transitioning');
-      }
-      var complete = function complete() {
-        if (_this2._hoverState !== HoverState.SHOW && tip.parentNode) {
-          tip.parentNode.removeChild(tip);
-        }
-
-        _this2.element.removeAttribute('aria-describedby');
-        $(_this2.element).trigger(_this2.constructor.Event.HIDDEN);
-        _this2._isTransitioning = false;
-        _this2.cleanupTether();
-
-        if (callback) {
-          callback();
-        }
-      };
 
       $(this.element).trigger(hideEvent);
 
@@ -314,19 +295,29 @@ var Tooltip = function ($) {
         return;
       }
 
-      $(tip).removeClass(ClassName.SHOW);
+      var start = function start() {
+        $(tip).removeClass(ClassName.SHOW);
 
-      this._activeTrigger[Trigger.CLICK] = false;
-      this._activeTrigger[Trigger.FOCUS] = false;
-      this._activeTrigger[Trigger.HOVER] = false;
+        _this2._activeTrigger[Trigger.CLICK] = false;
+        _this2._activeTrigger[Trigger.FOCUS] = false;
+        _this2._activeTrigger[Trigger.HOVER] = false;
+      };
 
-      if (Util.supportsTransitionEnd() && $(this.tip).hasClass(ClassName.FADE)) {
-        this._isTransitioning = true;
-        $(tip).one(Util.TRANSITION_END, complete).emulateTransitionEnd(TRANSITION_DURATION);
-      } else {
-        complete();
-      }
+      var complete = function complete() {
+        if (_this2._hoverState !== HoverState.SHOW && tip.parentNode) {
+          tip.parentNode.removeChild(tip);
+        }
 
+        _this2.element.removeAttribute('aria-describedby');
+        $(_this2.element).trigger(_this2.constructor.Event.HIDDEN);
+        _this2.cleanupTether();
+
+        if (callback) {
+          callback();
+        }
+      };
+
+      $(tip).transition(start, complete);
       this._hoverState = '';
     };
 
@@ -344,8 +335,6 @@ var Tooltip = function ($) {
       var $tip = $(this.getTipElement());
 
       this.setElementContent($tip.find(Selector.TOOLTIP_INNER), this.getTitle());
-
-      $tip.removeClass(ClassName.FADE + ' ' + ClassName.SHOW);
 
       this.cleanupTether();
     };
@@ -619,5 +608,5 @@ var Tooltip = function ($) {
   };
 
   return Tooltip;
-}(jQuery); /* global Tether */
+}(jQuery);
 //# sourceMappingURL=tooltip.js.map

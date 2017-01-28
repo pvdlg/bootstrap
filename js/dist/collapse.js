@@ -25,7 +25,6 @@ var Collapse = function ($) {
   var EVENT_KEY = '.' + DATA_KEY;
   var DATA_API_KEY = '.data-api';
   var JQUERY_NO_CONFLICT = $.fn[NAME];
-  var TRANSITION_DURATION = 600;
 
   var Default = {
     toggle: true,
@@ -75,7 +74,14 @@ var Collapse = function ($) {
       this._isTransitioning = false;
       this._element = element;
       this._config = this._getConfig(config);
-      this._triggerArray = $.makeArray($('[data-toggle="collapse"][href="#' + element.id + '"],' + ('[data-toggle="collapse"][data-target="#' + element.id + '"]')));
+
+      var triggerArray = [];
+      $(Selector.DATA_TOGGLE).each(function () {
+        if (Util.getTargets(this).filter(element).length) {
+          triggerArray.push(this);
+        }
+      });
+      this._triggerArray = triggerArray;
 
       this._parent = this._config.parent ? this._getParent() : null;
 
@@ -103,11 +109,7 @@ var Collapse = function ($) {
     Collapse.prototype.show = function show() {
       var _this = this;
 
-      if (this._isTransitioning) {
-        throw new Error('Collapse is transitioning');
-      }
-
-      if ($(this._element).hasClass(ClassName.SHOW)) {
+      if (this._isTransitioning || $(this._element).hasClass(ClassName.SHOW)) {
         return;
       }
 
@@ -152,39 +154,26 @@ var Collapse = function ($) {
         $(this._triggerArray).removeClass(ClassName.COLLAPSED).attr('aria-expanded', true);
       }
 
-      this.setTransitioning(true);
-
-      var complete = function complete() {
-        $(_this._element).removeClass(ClassName.COLLAPSING).addClass(ClassName.COLLAPSE).addClass(ClassName.SHOW);
-
-        _this._element.style[dimension] = '';
-
-        _this.setTransitioning(false);
-
-        $(_this._element).trigger(Event.SHOWN);
-      };
-
-      if (!Util.supportsTransitionEnd()) {
-        complete();
-        return;
-      }
-
       var capitalizedDimension = dimension[0].toUpperCase() + dimension.slice(1);
       var scrollSize = 'scroll' + capitalizedDimension;
 
-      $(this._element).one(Util.TRANSITION_END, complete).emulateTransitionEnd(TRANSITION_DURATION);
+      var start = function start() {
+        _this.setTransitioning(true);
+        _this._element.style[dimension] = _this._element[scrollSize] + 'px';
+      };
 
-      this._element.style[dimension] = this._element[scrollSize] + 'px';
+      var complete = function complete() {
+        _this.setTransitioning(false);
+        $(_this._element).removeClass(ClassName.COLLAPSING).addClass(ClassName.COLLAPSE).addClass(ClassName.SHOW).css(dimension, '').trigger(Event.SHOWN);
+      };
+
+      $(this._element).transition(start, complete);
     };
 
     Collapse.prototype.hide = function hide() {
       var _this2 = this;
 
-      if (this._isTransitioning) {
-        throw new Error('Collapse is transitioning');
-      }
-
-      if (!$(this._element).hasClass(ClassName.SHOW)) {
+      if (this._isTransitioning || !$(this._element).hasClass(ClassName.SHOW)) {
         return;
       }
 
@@ -205,25 +194,26 @@ var Collapse = function ($) {
 
       this._element.setAttribute('aria-expanded', false);
 
+      // Remove COLLAPSED and set aria-expanded=false to each trigger for which all its targets are not showed
       if (this._triggerArray.length) {
-        $(this._triggerArray).addClass(ClassName.COLLAPSED).attr('aria-expanded', false);
+        $(this._triggerArray).each(function () {
+          if (!Util.getTargets(this).hasClass(ClassName.SHOW)) {
+            $(this).addClass(ClassName.COLLAPSED).attr('aria-expanded', false);
+          }
+        });
       }
 
-      this.setTransitioning(true);
+      var start = function start() {
+        _this2.setTransitioning(true);
+        _this2._element.style[dimension] = '';
+      };
 
       var complete = function complete() {
         _this2.setTransitioning(false);
         $(_this2._element).removeClass(ClassName.COLLAPSING).addClass(ClassName.COLLAPSE).trigger(Event.HIDDEN);
       };
 
-      this._element.style[dimension] = '';
-
-      if (!Util.supportsTransitionEnd()) {
-        complete();
-        return;
-      }
-
-      $(this._element).one(Util.TRANSITION_END, complete).emulateTransitionEnd(TRANSITION_DURATION);
+      $(this._element).transition(start, complete);
     };
 
     Collapse.prototype.setTransitioning = function setTransitioning(isTransitioning) {
@@ -261,7 +251,7 @@ var Collapse = function ($) {
       var selector = '[data-toggle="collapse"][data-parent="' + this._config.parent + '"]';
 
       $(parent).find(selector).each(function (i, element) {
-        _this3._addAriaAndCollapsedClass(Collapse._getTargetFromElement(element), [element]);
+        _this3._addAriaAndCollapsedClass(Util.getTargets(element)[0], [element]);
       });
 
       return parent;
@@ -279,11 +269,6 @@ var Collapse = function ($) {
     };
 
     // static
-
-    Collapse._getTargetFromElement = function _getTargetFromElement(element) {
-      var selector = Util.getSelectorFromElement(element);
-      return selector ? $(selector)[0] : null;
-    };
 
     Collapse._jQueryInterface = function _jQueryInterface(config) {
       return this.each(function () {
@@ -332,12 +317,13 @@ var Collapse = function ($) {
 
   $(document).on(Event.CLICK_DATA_API, Selector.DATA_TOGGLE, function (event) {
     event.preventDefault();
-
-    var target = Collapse._getTargetFromElement(this);
-    var data = $(target).data(DATA_KEY);
-    var config = data ? 'toggle' : $(this).data();
-
-    Collapse._jQueryInterface.call($(target), config);
+    var $trigger = $(this);
+    Util.getTargets(this).each(function () {
+      var $target = $(this);
+      var data = $target.data(DATA_KEY);
+      var config = data ? 'toggle' : $trigger.data();
+      Collapse._jQueryInterface.call($target, config);
+    });
   });
 
   /**

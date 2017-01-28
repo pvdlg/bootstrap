@@ -23,7 +23,6 @@ var Alert = function ($) {
   var EVENT_KEY = '.' + DATA_KEY;
   var DATA_API_KEY = '.data-api';
   var JQUERY_NO_CONFLICT = $.fn[NAME];
-  var TRANSITION_DURATION = 150;
 
   var Selector = {
     DISMISS: '[data-dismiss="alert"]'
@@ -37,7 +36,6 @@ var Alert = function ($) {
 
   var ClassName = {
     ALERT: 'alert',
-    FADE: 'fade',
     SHOW: 'show'
   };
 
@@ -59,16 +57,22 @@ var Alert = function ($) {
     // public
 
     Alert.prototype.close = function close(element) {
+      var _this = this;
+
       element = element || this._element;
 
-      var rootElement = this._getRootElement(element);
-      var customEvent = this._triggerCloseEvent(rootElement);
+      var $rootElement = this._getRootElement(element);
+      var customEvent = this._triggerCloseEvent($rootElement);
 
       if (customEvent.isDefaultPrevented()) {
         return;
       }
 
-      this._removeElement(rootElement);
+      $rootElement.transition(function () {
+        return $rootElement.removeClass(ClassName.SHOW);
+      }, function () {
+        return _this._destroyElement($rootElement);
+      });
     };
 
     Alert.prototype.dispose = function dispose() {
@@ -79,18 +83,8 @@ var Alert = function ($) {
     // private
 
     Alert.prototype._getRootElement = function _getRootElement(element) {
-      var selector = Util.getSelectorFromElement(element);
-      var parent = false;
-
-      if (selector) {
-        parent = $(selector)[0];
-      }
-
-      if (!parent) {
-        parent = $(element).closest('.' + ClassName.ALERT)[0];
-      }
-
-      return parent;
+      var targets = Util.getTargets(element);
+      return (targets.length ? targets : $(element).closest('.' + ClassName.ALERT)).first();
     };
 
     Alert.prototype._triggerCloseEvent = function _triggerCloseEvent(element) {
@@ -100,23 +94,8 @@ var Alert = function ($) {
       return closeEvent;
     };
 
-    Alert.prototype._removeElement = function _removeElement(element) {
-      var _this = this;
-
-      $(element).removeClass(ClassName.SHOW);
-
-      if (!Util.supportsTransitionEnd() || !$(element).hasClass(ClassName.FADE)) {
-        this._destroyElement(element);
-        return;
-      }
-
-      $(element).one(Util.TRANSITION_END, function (event) {
-        return _this._destroyElement(element, event);
-      }).emulateTransitionEnd(TRANSITION_DURATION);
-    };
-
-    Alert.prototype._destroyElement = function _destroyElement(element) {
-      $(element).detach().trigger(Event.CLOSED).remove();
+    Alert.prototype._destroyElement = function _destroyElement($element) {
+      $element.detach().trigger(Event.CLOSED).remove();
     };
 
     // static

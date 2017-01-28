@@ -23,7 +23,6 @@ var Tab = function ($) {
   var EVENT_KEY = '.' + DATA_KEY;
   var DATA_API_KEY = '.data-api';
   var JQUERY_NO_CONFLICT = $.fn[NAME];
-  var TRANSITION_DURATION = 150;
 
   var Event = {
     HIDE: 'hide' + EVENT_KEY,
@@ -78,10 +77,8 @@ var Tab = function ($) {
         return;
       }
 
-      var target = void 0;
       var previous = void 0;
       var listElement = $(this._element).closest(Selector.LIST)[0];
-      var selector = Util.getSelectorFromElement(this._element);
 
       if (listElement) {
         previous = $.makeArray($(listElement).find(Selector.ACTIVE));
@@ -106,10 +103,6 @@ var Tab = function ($) {
         return;
       }
 
-      if (selector) {
-        target = $(selector)[0];
-      }
-
       this._activate(this._element, listElement);
 
       var complete = function complete() {
@@ -124,6 +117,8 @@ var Tab = function ($) {
         $(previous).trigger(hiddenEvent);
         $(_this._element).trigger(shownEvent);
       };
+
+      var target = Util.getTargets(this._element)[0];
 
       if (target) {
         this._activate(target, target.parentNode, complete);
@@ -143,14 +138,14 @@ var Tab = function ($) {
       var _this2 = this;
 
       var active = $(container).find(Selector.ACTIVE_CHILD)[0];
-      var isTransitioning = callback && Util.supportsTransitionEnd() && (active && $(active).hasClass(ClassName.FADE) || Boolean($(container).find(Selector.FADE_CHILD)[0]));
+      var isTransitioning = callback && (active && $(active).hasClass(ClassName.FADE) || Boolean($(container).find(Selector.FADE_CHILD)[0]));
 
       var complete = function complete() {
         return _this2._transitionComplete(element, active, isTransitioning, callback);
       };
 
       if (active && isTransitioning) {
-        $(active).one(Util.TRANSITION_END, complete).emulateTransitionEnd(TRANSITION_DURATION);
+        $(active).transition(null, complete);
       } else {
         complete();
       }

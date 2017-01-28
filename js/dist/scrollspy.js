@@ -119,16 +119,11 @@ var ScrollSpy = function ($) {
       var targets = $.makeArray($(this._selector));
 
       targets.map(function (element) {
-        var target = void 0;
-        var targetSelector = Util.getSelectorFromElement(element);
-
-        if (targetSelector) {
-          target = $(targetSelector)[0];
-        }
+        var target = Util.getTargets(element)[0];
 
         if (target && (target.offsetWidth || target.offsetHeight)) {
           // todo (fat): remove sketch reliance on jQuery position/offset
-          return [$(target)[offsetMethod]().top + offsetBase, targetSelector];
+          return [$(target)[offsetMethod]().top + offsetBase, '#' + $(target).attr('id')];
         }
         return null;
       }).filter(function (item) {

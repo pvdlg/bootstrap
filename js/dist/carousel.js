@@ -25,7 +25,6 @@ var Carousel = function ($) {
   var EVENT_KEY = '.' + DATA_KEY;
   var DATA_API_KEY = '.data-api';
   var JQUERY_NO_CONFLICT = $.fn[NAME];
-  var TRANSITION_DURATION = 600;
   var ARROW_LEFT_KEYCODE = 37; // KeyboardEvent.which value for left arrow key
   var ARROW_RIGHT_KEYCODE = 39; // KeyboardEvent.which value for right arrow key
 
@@ -112,10 +111,9 @@ var Carousel = function ($) {
     // public
 
     Carousel.prototype.next = function next() {
-      if (this._isSliding) {
-        throw new Error('Carousel is sliding');
+      if (!this._isSliding) {
+        this._slide(Direction.NEXT);
       }
-      this._slide(Direction.NEXT);
     };
 
     Carousel.prototype.nextWhenVisible = function nextWhenVisible() {
@@ -126,10 +124,9 @@ var Carousel = function ($) {
     };
 
     Carousel.prototype.prev = function prev() {
-      if (this._isSliding) {
-        throw new Error('Carousel is sliding');
+      if (!this._isSliding) {
+        this._slide(Direction.PREV);
       }
-      this._slide(Direction.PREV);
     };
 
     Carousel.prototype.pause = function pause(event) {
@@ -137,8 +134,7 @@ var Carousel = function ($) {
         this._isPaused = true;
       }
 
-      if ($(this._element).find(Selector.NEXT_PREV)[0] && Util.supportsTransitionEnd()) {
-        Util.triggerTransitionEnd(this._element);
+      if ($(this._element).find(Selector.NEXT_PREV)[0]) {
         this.cycle(true);
       }
 
@@ -344,16 +340,16 @@ var Carousel = function ($) {
         direction: eventDirectionName
       });
 
-      if (Util.supportsTransitionEnd() && $(this._element).hasClass(ClassName.SLIDE)) {
+      if ($(this._element).hasClass(ClassName.SLIDE)) {
 
         $(nextElement).addClass(orderClassName);
 
         Util.reflow(nextElement);
 
-        $(activeElement).addClass(directionalClassName);
-        $(nextElement).addClass(directionalClassName);
-
-        $(activeElement).one(Util.TRANSITION_END, function () {
+        $(activeElement).transition(function () {
+          $(activeElement).addClass(directionalClassName);
+          $(nextElement).addClass(directionalClassName);
+        }, function () {
           $(nextElement).removeClass(directionalClassName + ' ' + orderClassName).addClass(ClassName.ACTIVE);
 
           $(activeElement).removeClass(ClassName.ACTIVE + ' ' + orderClassName + ' ' + directionalClassName);
@@ -363,7 +359,7 @@ var Carousel = function ($) {
           setTimeout(function () {
             return $(_this3._element).trigger(slidEvent);
           }, 0);
-        }).emulateTransitionEnd(TRANSITION_DURATION);
+        });
       } else {
         $(activeElement).removeClass(ClassName.ACTIVE);
         $(nextElement).addClass(ClassName.ACTIVE);
@@ -410,29 +406,23 @@ var Carousel = function ($) {
     };
 
     Carousel._dataApiClickHandler = function _dataApiClickHandler(event) {
-      var selector = Util.getSelectorFromElement(this);
+      var $target = Util.getTargets(this).first();
 
-      if (!selector) {
+      if (!$target.hasClass(ClassName.CAROUSEL)) {
         return;
       }
 
-      var target = $(selector)[0];
-
-      if (!target || !$(target).hasClass(ClassName.CAROUSEL)) {
-        return;
-      }
-
-      var config = $.extend({}, $(target).data(), $(this).data());
+      var config = $.extend({}, $target.data(), $(this).data());
       var slideIndex = this.getAttribute('data-slide-to');
 
       if (slideIndex) {
         config.interval = false;
       }
 
-      Carousel._jQueryInterface.call($(target), config);
+      Carousel._jQueryInterface.call($target, config);
 
       if (slideIndex) {
-        $(target).data(DATA_KEY).to(slideIndex);
+        $target.data(DATA_KEY).to(slideIndex);
       }
 
       event.preventDefault();

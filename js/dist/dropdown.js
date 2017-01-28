@@ -28,7 +28,7 @@ var Dropdown = function ($) {
   var ARROW_UP_KEYCODE = 38; // KeyboardEvent.which value for up arrow key
   var ARROW_DOWN_KEYCODE = 40; // KeyboardEvent.which value for down arrow key
   var RIGHT_MOUSE_BUTTON_WHICH = 3; // MouseEvent.which value for the right button (assuming a right-handed mouse)
-  var REGEXP_KEYDOWN = new RegExp(ARROW_UP_KEYCODE + '|' + ARROW_DOWN_KEYCODE + '|' + ESCAPE_KEYCODE + '|' + SPACE_KEYCODE);
+  var REGEXP_KEYDOWN = new RegExp(ARROW_UP_KEYCODE + '|' + ARROW_DOWN_KEYCODE + '|' + ESCAPE_KEYCODE);
 
   var Event = {
     HIDE: 'hide' + EVENT_KEY,
@@ -51,10 +51,9 @@ var Dropdown = function ($) {
     BACKDROP: '.dropdown-backdrop',
     DATA_TOGGLE: '[data-toggle="dropdown"]',
     FORM_CHILD: '.dropdown form',
-    ROLE_MENU: '[role="menu"]',
-    ROLE_LISTBOX: '[role="listbox"]',
+    MENU: '.dropdown-menu',
     NAVBAR_NAV: '.navbar-nav',
-    VISIBLE_ITEMS: '[role="menu"] li:not(.disabled) a, ' + '[role="listbox"] li:not(.disabled) a'
+    VISIBLE_ITEMS: '.dropdown-menu .dropdown-item:not(.disabled)'
   };
 
   /**
@@ -81,8 +80,8 @@ var Dropdown = function ($) {
         return false;
       }
 
-      var parent = Dropdown._getParentFromElement(this);
-      var isActive = $(parent).hasClass(ClassName.SHOW);
+      var $parent = Dropdown._getParentFromElement(this);
+      var isActive = $parent.hasClass(ClassName.SHOW);
 
       Dropdown._clearMenus();
 
@@ -90,6 +89,18 @@ var Dropdown = function ($) {
         return false;
       }
 
+      var relatedTarget = {
+        relatedTarget: this
+      };
+      var showEvent = $.Event(Event.SHOW, relatedTarget);
+
+      $parent.trigger(showEvent);
+
+      if (showEvent.isDefaultPrevented()) {
+        return false;
+      }
+
+      // set the backdrop only if the dropdown menu will be opened
       if ('ontouchstart' in document.documentElement && !$(parent).closest(Selector.NAVBAR_NAV).length) {
 
         // if mobile we use a backdrop because click events don't delegate
@@ -99,22 +110,11 @@ var Dropdown = function ($) {
         $(dropdown).on('click', Dropdown._clearMenus);
       }
 
-      var relatedTarget = {
-        relatedTarget: this
-      };
-      var showEvent = $.Event(Event.SHOW, relatedTarget);
-
-      $(parent).trigger(showEvent);
-
-      if (showEvent.isDefaultPrevented()) {
-        return false;
-      }
-
       this.focus();
       this.setAttribute('aria-expanded', true);
 
-      $(parent).toggleClass(ClassName.SHOW);
-      $(parent).trigger($.Event(Event.SHOWN, relatedTarget));
+      $parent.toggleClass(ClassName.SHOW);
+      $parent.trigger($.Event(Event.SHOWN, relatedTarget));
 
       return false;
     };
@@ -156,52 +156,47 @@ var Dropdown = function ($) {
         return;
       }
 
-      var backdrop = $(Selector.BACKDROP)[0];
-      if (backdrop) {
-        backdrop.parentNode.removeChild(backdrop);
-      }
-
       var toggles = $.makeArray($(Selector.DATA_TOGGLE));
 
       for (var i = 0; i < toggles.length; i++) {
-        var parent = Dropdown._getParentFromElement(toggles[i]);
+        var $parent = Dropdown._getParentFromElement(toggles[i]);
         var relatedTarget = {
           relatedTarget: toggles[i]
         };
 
-        if (!$(parent).hasClass(ClassName.SHOW)) {
+        if (!$parent.hasClass(ClassName.SHOW)) {
           continue;
         }
 
-        if (event && (event.type === 'click' && /input|textarea/i.test(event.target.tagName) || event.type === 'focusin') && $.contains(parent, event.target)) {
+        if (event && (event.type === 'click' && /input|textarea/i.test(event.target.tagName) || event.type === 'focusin') && $.contains($parent[0], event.target)) {
           continue;
         }
 
         var hideEvent = $.Event(Event.HIDE, relatedTarget);
-        $(parent).trigger(hideEvent);
+        $parent.trigger(hideEvent);
         if (hideEvent.isDefaultPrevented()) {
           continue;
         }
 
+        // remove backdrop only if the dropdown menu will be hidden
+        var backdrop = $(parent).find(Selector.BACKDROP)[0];
+        if (backdrop) {
+          backdrop.parentNode.removeChild(backdrop);
+        }
+
         toggles[i].setAttribute('aria-expanded', 'false');
 
-        $(parent).removeClass(ClassName.SHOW).trigger($.Event(Event.HIDDEN, relatedTarget));
+        $parent.removeClass(ClassName.SHOW).trigger($.Event(Event.HIDDEN, relatedTarget));
       }
     };
 
     Dropdown._getParentFromElement = function _getParentFromElement(element) {
-      var parent = void 0;
-      var selector = Util.getSelectorFromElement(element);
-
-      if (selector) {
-        parent = $(selector)[0];
-      }
-
-      return parent || element.parentNode;
+      var targets = Util.getTargets(element);
+      return targets.length ? targets.first() : $(element.parentNode);
     };
 
     Dropdown._dataApiKeydownHandler = function _dataApiKeydownHandler(event) {
-      if (!REGEXP_KEYDOWN.test(event.which) || /input|textarea/i.test(event.target.tagName)) {
+      if (!REGEXP_KEYDOWN.test(event.which) && /button/i.test(event.target.tagName) && event.which === SPACE_KEYCODE || /input|textarea/i.test(event.target.tagName)) {
         return;
       }
 
@@ -212,13 +207,13 @@ var Dropdown = function ($) {
         return;
       }
 
-      var parent = Dropdown._getParentFromElement(this);
-      var isActive = $(parent).hasClass(ClassName.SHOW);
+      var $parent = Dropdown._getParentFromElement(this);
+      var isActive = $parent.hasClass(ClassName.SHOW);
 
-      if (!isActive && event.which !== ESCAPE_KEYCODE || isActive && event.which === ESCAPE_KEYCODE) {
+      if (!isActive && (event.which !== ESCAPE_KEYCODE || event.which !== SPACE_KEYCODE) || isActive && (event.which === ESCAPE_KEYCODE || event.which === SPACE_KEYCODE)) {
 
         if (event.which === ESCAPE_KEYCODE) {
-          var toggle = $(parent).find(Selector.DATA_TOGGLE)[0];
+          var toggle = $parent.find(Selector.DATA_TOGGLE)[0];
           $(toggle).trigger('focus');
         }
 
@@ -226,7 +221,7 @@ var Dropdown = function ($) {
         return;
       }
 
-      var items = $(parent).find(Selector.VISIBLE_ITEMS).get();
+      var items = $parent.find(Selector.VISIBLE_ITEMS).get();
 
       if (!items.length) {
         return;
@@ -267,7 +262,7 @@ var Dropdown = function ($) {
    * ------------------------------------------------------------------------
    */
 
-  $(document).on(Event.KEYDOWN_DATA_API, Selector.DATA_TOGGLE, Dropdown._dataApiKeydownHandler).on(Event.KEYDOWN_DATA_API, Selector.ROLE_MENU, Dropdown._dataApiKeydownHandler).on(Event.KEYDOWN_DATA_API, Selector.ROLE_LISTBOX, Dropdown._dataApiKeydownHandler).on(Event.CLICK_DATA_API + ' ' + Event.FOCUSIN_DATA_API, Dropdown._clearMenus).on(Event.CLICK_DATA_API, Selector.DATA_TOGGLE, Dropdown.prototype.toggle).on(Event.CLICK_DATA_API, Selector.FORM_CHILD, function (e) {
+  $(document).on(Event.KEYDOWN_DATA_API, Selector.DATA_TOGGLE, Dropdown._dataApiKeydownHandler).on(Event.KEYDOWN_DATA_API, Selector.MENU, Dropdown._dataApiKeydownHandler).on(Event.CLICK_DATA_API + ' ' + Event.FOCUSIN_DATA_API, Dropdown._clearMenus).on(Event.CLICK_DATA_API, Selector.DATA_TOGGLE, Dropdown.prototype.toggle).on(Event.CLICK_DATA_API, Selector.FORM_CHILD, function (e) {
     e.stopPropagation();
   });
 
