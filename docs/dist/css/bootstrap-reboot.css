@@ -174,10 +174,6 @@ svg:not(:root) {
   overflow: hidden;
 }
 
-[role="button"] {
-  cursor: pointer;
-}
-
 a,
 area,
 button,
@@ -335,4 +331,5 @@ template {
 [hidden] {
   display: none !important;
 }
+
 /*# sourceMappingURL=bootstrap-reboot.css.map */
