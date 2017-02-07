@@ -10,27 +10,15 @@ import jQuery from 'jquery'
 
 const Util = (($) => {
 
-
   /**
    * ------------------------------------------------------------------------
-   * Private TransitionEnd Helpers
+   * Private Transition Helpers
    * ------------------------------------------------------------------------
    */
-
-  let transition = false
 
   const MAX_UID = 1000000
 
   const MILLIS = 1000
-
-  const TransitionEndEvent = {
-    WebkitTransition : 'webkitTransitionEnd',
-    MozTransition    : 'transitionend',
-    OTransition      : 'oTransitionEnd otransitionend',
-    transition       : 'transitionend'
-  }
-
-  const TRANSITION_END = 'bsTransitionEnd'
 
   // shoutout AngusCroll (https://goo.gl/pxwQGp)
   function toType(obj) {
@@ -39,35 +27,6 @@ const Util = (($) => {
 
   function isElement(obj) {
     return (obj[0] || obj).nodeType
-  }
-
-  function getSpecialTransitionEndEvent() {
-    return {
-      bindType: transition.end,
-      delegateType: transition.end,
-      handle(event) {
-        if ($(event.target).is(this)) {
-          return event.handleObj.handler.apply(this, arguments) // eslint-disable-line prefer-rest-params
-        }
-        return undefined
-      }
-    }
-  }
-
-  function transitionEndTest() {
-    const el = document.createElement('bootstrap')
-
-    for (const name in TransitionEndEvent) {
-      if (el.style[name] !== undefined) {
-        return {
-          end: TransitionEndEvent[name]
-        }
-      }
-    }
-    // If the browser doesn't support transitionEnd then use the custom TRANSITION_END event
-    return {
-      end: TRANSITION_END
-    }
   }
 
   function getCssTransitionDuration(element) {
@@ -92,21 +51,11 @@ const Util = (($) => {
   function transitionEmulator(start, complete) {
     // determine the longest transition duration (in case there is a transition on multiple attributes) from the css
     const duration = getCssTransitionDuration(this)
-    // if there is a non 0 transition duration and transition are supported
+    // if there is a non 0 transition duration
     if (duration) {
-      let called = false
-      this.one(TRANSITION_END, () => {
-        if (!called) {
-          called = true
-          executeCallback(complete)
-        }
-      })
-      // set a timeout to call complete in case (instead of using transitionend that can sometimes not be triggered). This way we can guarantee complete is always called
+      // set a timeout to call complete (instead of using transitionend that is sometimes not triggered). This way we can guarantee complete is always called
       setTimeout(() => {
-        if (!called) {
-          called = true
-          executeCallback(complete)
-        }
+        executeCallback(complete)
       }, duration * MILLIS)
       // execute the start transition function, after setting the timeout
       executeCallback(start)
@@ -123,10 +72,8 @@ const Util = (($) => {
     }
   }
 
-  function setTransitionEndSupport() {
-    transition = transitionEndTest()
+  function setTransitionEmulator() {
     $.fn.transition = transitionEmulator
-    $.event.special[TRANSITION_END] = getSpecialTransitionEndEvent()
   }
 
 
@@ -181,7 +128,7 @@ const Util = (($) => {
     }
   }
 
-  setTransitionEndSupport()
+  setTransitionEmulator()
 
   return Util
 
