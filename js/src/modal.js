@@ -160,15 +160,6 @@ const Modal = (($) => {
         return
       }
 
-// <<<<<<< HEAD
-// =======
-//       const transition = Util.supportsTransitionEnd() && $(this._element).hasClass(ClassName.FADE)
-//
-//       if (transition) {
-//         this._isTransitioning = true
-//       }
-//
-// >>>>>>> js-transitioning-1
       const hideEvent = $.Event(Event.HIDE)
 
       $(this._element).trigger(hideEvent)
@@ -187,24 +178,9 @@ const Modal = (($) => {
 
       $(this._element).transition(() => {
         $(this._element).removeClass(ClassName.SHOW)
-
-// <<<<<<< HEAD
         $(this._element).off(Event.CLICK_DISMISS)
         $(this._dialog).off(Event.MOUSEDOWN_DISMISS)
       }, (event) => this._hideModal(event))
-// //=======
-//       $(this._element).off(Event.CLICK_DISMISS)
-//       $(this._dialog).off(Event.MOUSEDOWN_DISMISS)
-//
-//       if (transition) {
-//
-//         $(this._element)
-//           .one(Util.TRANSITION_END, (event) => this._hideModal(event))
-//           .emulateTransitionEnd(TRANSITION_DURATION)
-//       } else {
-//         this._hideModal()
-//       }
-// >>>>>>> js-transitioning-1
     }
 
     dispose() {
